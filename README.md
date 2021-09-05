@@ -54,9 +54,9 @@ In the table below you may find a comprehensive view regarding the attributes th
 | FIRE\_SYMB\_PARTY | Which kind of company policies the customer has. For example if he/she has fire insurance (per party)? | Categorical |
 | CLAIMS\_AMOUNT | The Amount The Company Will Pay To Reimburse The Lost Item That Is Equal To How Much The Item Is Worth Today | Numerical |
 | HAS\_RETURNED | If The Customer Has Previously Left The Company And Then Returned | Categorical |
-| NEW\_PREMIUM\_PRICE | New Premium Price after Renewal | Numerical |
+| NEW\_PREMIUM\_PRICE | New Premium Price after Renewal (is always 0 for churn cases --> remove) | Numerical |
 | NUM\_COMPLAINTS | Total number of complaints made from the insuree (if any) | Numerical |
-| NEW\_MONTHLY\_PREMIUM\_PRICE | New Monthly Premium Price after Renewal | Numerical |
+| NEW\_MONTHLY\_PREMIUM\_PRICE | New Monthly Premium Price after Renewal (is always 0 for churn cases --> remove) | Numerical |
 | LOSS\_RATIO | The ratio of losses to premiums earned | Numerical |
 | ASFAL\_AMOUNT | Sum of the amount to be paid for an insurance policy. | Numerical |
 
