@@ -6,15 +6,7 @@ Customer Churn Prediction - Car Insurance Industry
 
 It is no secret that churn rate is a health indicator for any subscription-based company. The ability to identify customers that are not happy with provided solutions allows businesses to learn about product or pricing plan weak points, operation issues, as well as customer preferences and expectations, in order to reduce reasons for churn. For that reason, churn prediction and customer retention is a top priority for many companies, as acquiring new customers can be several times more expensive than retaining existing ones. Meanwhile, customer churn poses a significant challenge in the insurance industry, reports show a frequent and increasing trend of customers switching companies in order to take advantage of a competitors&#39; offer. For that reason, it is important to implement a churn model, which will ultimately lead to the design of a data-driven retention strategy, by providing insights into the reasons behind customers&#39; churn and risk estimations associated with individual customers.
 
-With that been said, this project focuses on the design of a prediction model for car insurance churn (contract-oriented), which identifies the customers/contracts with a high likelihood of leaving the company
-
-ML Process Phases
-
-Diagram below shows the main stages of the machine-learning process.
-
-![](RackMultipart20210905-4-2p5joe_html_b949e2b01329704c.jpg)
-
-Below you can find a brief explanation of the above-enumerated stages, along with methods used by each phase.
+With that been said, this project focuses on the design of a prediction model for car insurance churn (contract-oriented), which identifies the customers/contracts with a high likelihood of leaving the company.
 
 # Data Acquisition
 
@@ -73,13 +65,29 @@ All attributes mentioned above, were consolidated in a single view. In this view
 However, since the final view contains historical monthly snapshots of contracts, in order to avoid the use of redundant information in the final dataset several manipulation techniques were incorporated in the final extraction logic, in order to provide a comprehensive view of the data.
 
 1. Data extraction logic: Exclude repetitive or misguiding records from the dataset. For example in this case, the company is only interested in contracts that are about to be renewed. So in the final dataset only contracts that are recognized as possible for renewal in the next period are collected. Meanwhile, other business rules were applied, such as excluding contracts with zero duration since these data do not correspond to reality. The following SQL code gives an overview of the rules that were applied:
+```
+INSERT INTO ET_ML_CHURN_FI_FNL
+SELECT * 
+FROM ML_CHURN_FI
+WHERE 
+MO_KEY>20190501 AND  MO_KEY<20210701 AND --Only take into account last years' data.
+TOTAL_YEAR_INSURED_SYMB>=0 AND TOTAL_YEAR_INSURED_SYMB<=10 AND --Only a specific insurance period is valid according to the business logic specified by the company.
+POLICY_STATUS=1  AND --Take into account only active snapshots of contracts.
+CURRENT_POLICY_STATUS!=-1 AND --Do not take into account null values for our target variable.
+CURRENT_POLICY_STATUS=0 AND
+IS_RENEWAL=1 AND  -- Only take into account monthly snapshots corresponding to the month of renewal for each contract.
+SYMB_DURATION!=0  -- Do not take into account contract duration outliers.
+AND INS_PKG_KEY!=-1 -- Do not take into account null attributes.
+AND AGENT_CTGR_KEY!=-1-- Do not take into account null attributes.
+AND TAXK_INC_ZONE_KEY!=-1-- Do not take into account null attributes.
+```
 
-![](RackMultipart20210905-4-2p5joe_html_60e876f2a7bb7600.png)
 
-1. Resampling: Given the nature of the use case it makes sense that the majority of our records represent the NOT\_CHURN class (~80% of the dataset), while the CHURN class is only present in the ~20% of the dataset. For that reason, the following methods of resampling were applied:
-  1. Random sub-sampling of dominant class (NOT\_CHURN)
-  2. Avoid repetitive records. Our dataset contains monthly snapshots that are bound to present multiple views of the same attributes, if the customer never churns or makes any distinctive changes in the contract rules. For that reason, after concluding to the main features that were going to be examined for the ML task, only the distinct values made it to the final dataset.
-  3. Over-sampling under-represented class (CHURN): Enrich the dataset with views of records on customers that churned in past months (not included in the original dataset).
+
+2. Resampling: Given the nature of the use case it makes sense that the majority of our records represent the NOT\_CHURN class (~80% of the dataset), while the CHURN class is only present in the ~20% of the dataset. For that reason, the following methods of resampling were applied:
+  A. Random sub-sampling of dominant class (NOT\_CHURN)
+  B. Avoid repetitive records. Our dataset contains monthly snapshots that are bound to present multiple views of the same attributes, if the customer never churns or makes any distinctive changes in the contract rules. For that reason, after concluding to the main features that were going to be examined for the ML task, only the distinct values made it to the final dataset.
+  C. Over-sampling under-represented class (CHURN): Enrich the dataset with views of records on customers that churned in past months (not included in the original dataset).
 
 The final dataset above was extracted to data frames using Python library cx\_Oracle. The present code makes use of the pre-extracted data frames which were saved in the form of pickle dumps.
 
@@ -88,7 +96,6 @@ Note that the details above corresponds to the details applied for the acquisiti
 | **Category** | **Train** | **Test** |
 | --- | --- | --- |
 | **Dataset Name** | ET\_ML\_CHURN\_FI\_FNL | ET\_ML\_CHURN\_FI\_TEST |
-| --- | --- | --- |
 | **No of records** | 1.069.994 | 85522 |
 | **Churn records** | 750.503 | 74.089 |
 | **Not Churn Records** | 486.895 | 11.433 |
@@ -124,13 +131,13 @@ The correlation coefficient has values between -1 to 1:
 
 ![](RackMultipart20210905-4-2p5joe_html_8ba4f1f8b90a546a.png)
 
-1. **Mutual Info**
+2. **Mutual Info**
 
 This method utilize the [mutual information](https://en.wikipedia.org/wiki/Mutual_information). It calculates mutual information value for each of independent variables with respect to dependent variable, and selects the ones, which has most information gain. In other words, it measures the dependency of features with the target value. The higher score means more dependent variables.
 
 ![](RackMultipart20210905-4-2p5joe_html_c4b514b64530bfbb.png)
 
-**K-Best**
+3. **K-Best**
 
 This class is actually a more general approach compared to the above-mentioned classes, since it takes an additional scoring function parameter which states, which function to use in feature selection. Actually, it as a kind of wrapper. We can also use f\_classif or mutual\_info\_class\_if inside this object. This object returns [p-values](https://www.r-bloggers.com/chi-squared-test/) of each feature according to the chosen scoring function as well.
 
@@ -138,7 +145,7 @@ Note about **f\_classif** method: It uses the ANOVA f-test for the features, and
 
 ![](RackMultipart20210905-4-2p5joe_html_ce956f9bce51f544.png)
 
-1. **Recursive Feature elimination**
+4. **Recursive Feature elimination**
 
 **Recursive Feature Elimination** , or RFE for short RFE is a wrapper-type feature selection algorithm. This means that a different machine-learning algorithm is given and used in the core of the method, is wrapped by RFE, and used to help select features. This is in contrast to filter-based feature selections that score each feature and select those features with the largest (or smallest) score.
 
